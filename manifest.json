@@ -1,0 +1,7 @@
+{
+  "id": "hot-reload",
+  "name": "Hot Reload",
+  "version": "0.1.0",
+  "description": "Automatically reload in-development plugins when their files are changed",
+  "isDesktopOnly": true
+}
