@@ -4,7 +4,7 @@ module.exports = class HotReload extends Plugin {
 
     async onload() {
         this.pluginReloaders = {};
-        this.lastReload = null;
+        this.inProgress = null;
         await this.getPluginNames();
         this.reindexPlugins = this.debouncedMethod(500, this.getPluginNames);
         this.registerEvent( this.app.vault.on("raw", this.onFileChange.bind(this)) );
@@ -40,20 +40,20 @@ module.exports = class HotReload extends Plugin {
     }
 
     requestReload(plugin) {
-        this.lastReload = this.reload(plugin);
+        const next = this.inProgress = this.reload(plugin, this.inProgress);
+        next.finally(() => {if (this.inProgress === next) this.inProgress = null;})
     }
 
-    async reload(plugin) {
+    async reload(plugin, previous) {
         const plugins = this.app.plugins;
         try {
             // Wait for any other queued/in-progress reloads to finish
-            if (this.lastReload) await this.lastReload;
+            await previous;
             await plugins.disablePlugin(plugin);
             console.debug("disabled", plugin);
             await plugins.enablePlugin(plugin);
             console.debug("enabled", plugin);
         } catch(e) {}
-        this.lastReload = null;
     }
 
     debouncedMethod(ms, func, ...args) {
