@@ -1,4 +1,4 @@
-const {Plugin} = require("obsidian");
+const {Plugin, Notice} = require("obsidian");
 
 module.exports = class HotReload extends Plugin {
 
@@ -53,6 +53,7 @@ module.exports = class HotReload extends Plugin {
             console.debug("disabled", plugin);
             await plugins.enablePlugin(plugin);
             console.debug("enabled", plugin);
+            new Notice(`Plugin "${plugin}" has been reloaded`);
         } catch(e) {}
     }
 
