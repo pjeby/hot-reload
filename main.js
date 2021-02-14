@@ -13,7 +13,9 @@ module.exports = class HotReload extends Plugin {
     }
 
     watch(path) {
-        if (watchNeeded) this.app.vault.adapter.startWatchPath(path, false);
+        if (!watchNeeded) return;
+        if (this.app.vault.adapter.watchers.hasOwnProperty(path)) return;
+        return this.app.vault.adapter.startWatchPath(path, false);
     }
 
     async getPluginNames() {
