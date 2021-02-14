@@ -1,5 +1,7 @@
 const {Plugin, Notice} = require("obsidian");
 
+const watchNeeded = window.process.platform !== "darwin" && window.process.platform !== "win32";
+
 module.exports = class HotReload extends Plugin {
 
     async onload() {
@@ -10,6 +12,10 @@ module.exports = class HotReload extends Plugin {
         this.registerEvent( this.app.vault.on("raw", this.onFileChange.bind(this)) );
     }
 
+    watch(path) {
+        if (watchNeeded) this.app.vault.adapter.startWatchPath(path, false);
+    }
+
     async getPluginNames() {
         await this.app.plugins.loadManifests();
         const plugins = {}, enabled = new Set();
@@ -18,7 +24,10 @@ module.exports = class HotReload extends Plugin {
             if (
                 await this.app.vault.exists(dir+"/.git") ||
                 await this.app.vault.exists(dir+"/.hotreload")
-            ) enabled.add(id);
+            ) {
+                enabled.add(id);
+                this.watch(dir);
+            }
         }
         this.pluginNames = plugins;
         this.enabledPlugins = enabled;
