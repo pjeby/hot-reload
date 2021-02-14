@@ -1,4 +1,5 @@
 const {Plugin, Notice} = require("obsidian");
+const fs = require("fs");
 
 const watchNeeded = window.process.platform !== "darwin" && window.process.platform !== "win32";
 
@@ -10,26 +11,25 @@ module.exports = class HotReload extends Plugin {
         await this.getPluginNames();
         this.reindexPlugins = this.debouncedMethod(500, this.getPluginNames);
         this.registerEvent( this.app.vault.on("raw", this.onFileChange.bind(this)) );
+        this.watch(".obsidian/plugins");
     }
 
     watch(path) {
         if (!watchNeeded) return;
         if (this.app.vault.adapter.watchers.hasOwnProperty(path)) return;
-        return this.app.vault.adapter.startWatchPath(path, false);
+        if (fs.existsSync(path) && fs.statSync(path).isDirectory()) this.app.vault.adapter.startWatchPath(path, false);
     }
 
     async getPluginNames() {
         await this.app.plugins.loadManifests();
         const plugins = {}, enabled = new Set();
         for (const {id, dir} of Object.values(app.plugins.manifests)) {
+            this.watch(dir);
             plugins[dir.split("/").pop()] = id;
             if (
                 await this.app.vault.exists(dir+"/.git") ||
                 await this.app.vault.exists(dir+"/.hotreload")
-            ) {
-                enabled.add(id);
-                this.watch(dir);
-            }
+            ) enabled.add(id);
         }
         this.pluginNames = plugins;
         this.enabledPlugins = enabled;
@@ -39,6 +39,7 @@ module.exports = class HotReload extends Plugin {
         if (!filename.startsWith(".obsidian/plugins/")) return;
         const path = filename.split("/");
         const base = path.pop(), dir = path.pop();
+        if (path.length === 1 && dir === "plugins") return this.watch(filename);
         if (path.length != 2) return;
         const plugin = dir && this.pluginNames[dir];
         if (base === "manifest.json" || base === ".hotreload" || base === ".git" || !plugin) return this.reindexPlugins();
