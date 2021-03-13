@@ -5,7 +5,9 @@ const watchNeeded = window.process.platform !== "darwin" && window.process.platf
 
 module.exports = class HotReload extends Plugin {
 
-    async onload() {
+    onload() { this.app.workspace.onLayoutReady( this._onload.bind(this) ); }
+
+    async _onload() {
         this.pluginReloaders = {};
         this.inProgress = null;
         await this.getPluginNames();
