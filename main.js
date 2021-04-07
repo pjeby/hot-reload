@@ -38,7 +38,7 @@ module.exports = class HotReload extends Plugin {
     }
 
     onFileChange(filename) {
-        if (!filename.startsWith(".obsidian/plugins/")) return;
+        if (!filename.startsWith(this.app.plugins.getPluginFolder()+"/")) return;
         const path = filename.split("/");
         const base = path.pop(), dir = path.pop();
         if (path.length === 1 && dir === "plugins") return this.watch(filename);
