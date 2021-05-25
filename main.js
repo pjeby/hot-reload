@@ -17,13 +17,15 @@ module.exports = class HotReload extends Plugin {
     }
 
     watch(path) {
-        if (!watchNeeded) return;
         if (this.app.vault.adapter.watchers.hasOwnProperty(path)) return;
-        if (fs.existsSync(path) && fs.statSync(path).isDirectory()) this.app.vault.adapter.startWatchPath(path, false);
+        const realPath = [this.app.vault.adapter.basePath, path].join("/");
+        const lstat = fs.lstatSync(realPath);
+        if (lstat && (watchNeeded || lstat.isSymbolicLink()) && fs.statSync(realPath).isDirectory()) {
+            this.app.vault.adapter.startWatchPath(path, false);
+        }
     }
 
     async getPluginNames() {
-        await this.app.plugins.loadManifests();
         const plugins = {}, enabled = new Set();
         for (const {id, dir} of Object.values(app.plugins.manifests)) {
             this.watch(dir);
