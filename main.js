@@ -70,6 +70,11 @@ module.exports = class HotReload extends Plugin {
             await plugins.enablePlugin(plugin);
             console.debug("enabled", plugin);
             new Notice(`Plugin "${plugin}" has been reloaded`);
+            const tFile = this.app.vault.getAbstractFileByPath('hot-reload.md')
+            if (tFile) {
+            const content = await this.app.vault.read(tFile)
+            await this.app.vault.modify(tFile, plugin.concat("\n", content))
+            }
         } catch(e) {}
     }
 
