@@ -67,7 +67,15 @@ module.exports = class HotReload extends Plugin {
             await previous;
             await plugins.disablePlugin(plugin);
             console.debug("disabled", plugin);
-            await plugins.enablePlugin(plugin);
+            // Ensure sourcemaps are loaded (Obsidian 14+)
+            const oldDebug = localStorage.getItem("debug-plugin");
+            localStorage.setItem("debug-plugin", "1");
+            try {
+                await plugins.enablePlugin(plugin);
+            } finally {
+                // Restore previous setting
+                if (oldDebug === null) localStorage.removeItem("debug-plugin"); else localStorage.setItem("debug-plugin", oldDebug);
+            }
             console.debug("enabled", plugin);
             new Notice(`Plugin "${plugin}" has been reloaded`);
         } catch(e) {}
