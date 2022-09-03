@@ -5,6 +5,8 @@ const watchNeeded = window.process.platform !== "darwin" && window.process.platf
 
 module.exports = class HotReload extends Plugin {
 
+    statCache = new Map();  // path -> Stat
+
     onload() { this.app.workspace.onLayoutReady( this._onload.bind(this) ); }
 
     async _onload() {
@@ -14,6 +16,12 @@ module.exports = class HotReload extends Plugin {
         this.reindexPlugins = this.debouncedMethod(500, this.getPluginNames);
         this.registerEvent( this.app.vault.on("raw", this.onFileChange.bind(this)) );
         this.watch(".obsidian/plugins");
+        await this.checkVersions();
+        this.addCommand({
+            id: "scan-for-changes",
+            name: "Check plugins for changes and reload them",
+            callback: () => this.checkVersions()
+        })
     }
 
     watch(path) {
@@ -22,6 +30,22 @@ module.exports = class HotReload extends Plugin {
         const lstat = fs.lstatSync(realPath);
         if (lstat && (watchNeeded || lstat.isSymbolicLink()) && fs.statSync(realPath).isDirectory()) {
             this.app.vault.adapter.startWatchPath(path, false);
+        }
+    }
+
+    async checkVersions() {
+        const base = this.app.plugins.getPluginFolder();
+        for (const dir of Object.keys(this.pluginNames)) {
+            for (const file of ["manifest.json", "main.js", "styles.css", ".hotreload"]) {
+                const path = `${base}/${dir}/${file}`;
+                const stat = await app.vault.adapter.stat(path);
+                if (stat) {
+                    if (this.statCache.has(path) && stat.mtime !== this.statCache.get(path).mtime) {
+                        this.onFileChange(path);
+                    }
+                    this.statCache.set(path, stat);
+                }
+            }
         }
     }
 
