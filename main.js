@@ -21,7 +21,7 @@ module.exports = class HotReload extends Plugin {
             this.inProgress = null;
             await this.getPluginNames();
             this.registerEvent( this.app.vault.on("raw", this.requestScan));
-            this.watch(`${app.vault.configDir}/plugins`);
+            this.watch(this.app.plugins.getPluginFolder());
             this.requestScan();
             this.addCommand({
                 id: "scan-for-changes",
