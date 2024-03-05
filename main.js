@@ -48,7 +48,6 @@ module.exports = class HotReload extends Plugin {
         for (const dir of Object.keys(this.pluginNames)) {
             for (const file of ["manifest.json", "main.js", "styles.css", ".hotreload"]) {
                 const path = `${base}/${dir}/${file}`;
-                if (!fs.existsSync(path)) continue;
                 const stat = await app.vault.adapter.stat(path);
                 if (stat) {
                     if (this.statCache.has(path) && stat.mtime !== this.statCache.get(path).mtime) {
