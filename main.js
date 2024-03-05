@@ -34,7 +34,7 @@ module.exports = class HotReload extends Plugin {
     watch(path) {
         if (this.app.vault.adapter.watchers.hasOwnProperty(path)) return;
         const realPath = [this.app.vault.adapter.basePath, path].join("/");
-        const lstat = fs.lstatSync(realPath);
+        const lstat = fs.lstatSync(realPath, {throwIfNoEntry: false});
         if (lstat && (watchNeeded || lstat.isSymbolicLink()) && fs.statSync(realPath).isDirectory()) {
             this.app.vault.adapter.startWatchPath(path, false);
         }
