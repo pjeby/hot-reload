@@ -1,4 +1,4 @@
-const {Plugin, Notice, debounce} = require("obsidian");
+const { Plugin, Notice, debounce } = require("obsidian");
 const fs = require("fs");
 
 const watchNeeded = window.process.platform !== "darwin" && window.process.platform !== "win32";
@@ -13,14 +13,14 @@ module.exports = class HotReload extends Plugin {
     }
 
     reindexPlugins = debounce(() => this.run(() => this.getPluginNames()), 500, true);
-    requestScan    = debounce(() => this.run(() => this.checkVersions()),  250, true);
+    requestScan = debounce(() => this.run(() => this.checkVersions()), 250, true);
 
     onload() {
-        app.workspace.onLayoutReady(async ()=> {
+        app.workspace.onLayoutReady(async () => {
             this.pluginReloaders = {};
             this.inProgress = null;
             await this.getPluginNames();
-            this.registerEvent( this.app.vault.on("raw", this.requestScan));
+            this.registerEvent(this.app.vault.on("raw", this.requestScan));
             this.watch(this.app.plugins.getPluginFolder());
             this.requestScan();
             this.addCommand({
@@ -34,10 +34,10 @@ module.exports = class HotReload extends Plugin {
     watch(path) {
         if (this.app.vault.adapter.watchers.hasOwnProperty(path)) return;
         const realPath = [this.app.vault.adapter.basePath, path].join("/");
-        if (!fs.existsSync(realPath)) {
+        const lstat = fs.lstatSync(realPath, { throwIfNoEntry: false });
+        if (!lstat) {
             return;
         }
-        const lstat = fs.lstatSync(realPath);
         if (lstat && (watchNeeded || lstat.isSymbolicLink()) && fs.statSync(realPath).isDirectory()) {
             this.app.vault.adapter.startWatchPath(path, false);
         }
@@ -48,9 +48,7 @@ module.exports = class HotReload extends Plugin {
         for (const dir of Object.keys(this.pluginNames)) {
             for (const file of ["manifest.json", "main.js", "styles.css", ".hotreload"]) {
                 const path = `${base}/${dir}/${file}`;
-                if (!fs.existsSync(path)) {
-                    return;
-                }
+                if (!fs.existsSync(path)) continue;
                 const stat = await app.vault.adapter.stat(path);
                 if (stat) {
                     if (this.statCache.has(path) && stat.mtime !== this.statCache.get(path).mtime) {
@@ -64,12 +62,12 @@ module.exports = class HotReload extends Plugin {
 
     async getPluginNames() {
         const plugins = {}, enabled = new Set();
-        for (const {id, dir} of Object.values(app.plugins.manifests)) {
+        for (const { id, dir } of Object.values(app.plugins.manifests)) {
             this.watch(dir);
             plugins[dir.split("/").pop()] = id;
             if (
-                await this.app.vault.exists(dir+"/.git") ||
-                await this.app.vault.exists(dir+"/.hotreload")
+                await this.app.vault.exists(dir + "/.git") ||
+                await this.app.vault.exists(dir + "/.hotreload")
             ) enabled.add(id);
         }
         this.pluginNames = plugins;
@@ -77,7 +75,7 @@ module.exports = class HotReload extends Plugin {
     }
 
     onFileChange(filename) {
-        if (!filename.startsWith(this.app.plugins.getPluginFolder()+"/")) return;
+        if (!filename.startsWith(this.app.plugins.getPluginFolder() + "/")) return;
         const path = filename.split("/");
         const base = path.pop(), dir = path.pop();
         if (path.length === 1 && dir === "plugins") return this.watch(filename);
