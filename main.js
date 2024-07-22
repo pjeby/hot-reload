@@ -101,7 +101,7 @@ module.exports = class HotReload extends Plugin {
         try {
             await plugins.enablePlugin(plugin);
             // Ensure rendering-related changes are displayed automatically
-		    app.workspace.activeEditor.leaf.rebuildView();
+	    app.workspace.activeEditor.leaf.rebuildView();
         } finally {
             // Restore previous setting
             if (oldDebug === null) localStorage.removeItem("debug-plugin"); else localStorage.setItem("debug-plugin", oldDebug);
