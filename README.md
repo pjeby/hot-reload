@@ -15,3 +15,11 @@ Finally, note that while this plugin takes care of the grunt work of reloading y
 ### Installation
 
 This is an Obsidian plugin like any other, and must be cloned or unzipped into your vault's `.obsidian/plugins/` directory (or similar one if you've overridden the `.obsidian` directory name in the Obsidian settings), then enabled in the Obsidian configuration.  It's not registered as a standard community plugin for downloading or updating within Obsidian, because it's intended for developer use only, and because it can enable other plugins.
+
+### Mobile Plugin Development
+
+This plugin is strictly for the desktop and does *not* run on Obsidian mobile.  If you want to get hot-reloading there, you have two main options, depending on what synchronization tool/service you're using:
+
+- Obsidian Sync service: Enable the "Sync > Vault configuration sync, Installed community plugins" setting for Obsidian to automatically restart modified plugins after sync (Thanks to @ChasKane for providing this tip)
+
+- Other Sync tools: the [Hot Reload Mobile](https://github.com/shabegom/obsidian-hot-reload-mobile) plugin works with any synchronization mechanism that updates notes, by writing to a note on desktop to trigger the reload on mobile after the note syncs.
