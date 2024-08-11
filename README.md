@@ -2,7 +2,7 @@
 
 If you develop plugins for [Obsidian.md](https://Obsidian.md/), you may be familiar with the frequent need to either restart/reload Obsidian, or else go into its plugin settings to disable and re-enable the plugin you're working on.
 
-Well, you don't need to do that any more.  Just install this plugin, and let it do all the work.  When enabled, this plugin automatically watches for changes to the `main.js` or `styles.css` of any plugin whose directory includes a `.git` subdirectory or a file called `.hotreload`, and then automatically disables and re-enables that plugin once changes have stopped for about three-quarters of a second.  A notice will appear briefly in Obsidian when the reload occurs (the verbose logs in the developer tools will also reflect this). If you enable the Sync core plugin (paid feature, but there are free alternatives) and enable the `Sync > Vault configuration sync, Installed community plugins` feature, you'll be able to see updates on the mobile app instantly too.
+Well, you don't need to do that any more.  Just install this plugin, and let it do all the work.  When enabled, this plugin automatically watches for changes to the `main.js` or `styles.css` of any plugin whose directory includes a `.git` subdirectory or a file called `.hotreload`, and then automatically disables and re-enables that plugin once changes have stopped for about three-quarters of a second.  A notice will appear briefly in Obsidian when the reload occurs (verbose logs in the developer tools will also reflect this). 
 
 The plugin also watches for changes to `manifest.json` files, and the addition or removal of `.git` or `.hotreload`, and updates its watch lists accordingly.  So there's no configuration needed to add or remove plugins from the hot reload list: just put your new plugin(s) under revision control or create a `.hotreload` file in them.
 
@@ -11,6 +11,8 @@ The plugin also watches for changes to `manifest.json` files, and the addition o
 Note, however, that if you have this plugin enabled, then it *can* enable plugins that are not currently enabled in the settings, so long as you've checked them out using git or have added a `.hotreload` file.  (For development, this is actually a good thing, because when you make a change that breaks the plugin load process, all you need to do is save your file(s) again, and hotreload will try to enable it again, saving you from having to reload or go back to the settings again.)
 
 Finally, note that while this plugin takes care of the grunt work of reloading your plugin, please keep in mind that it's your *plugin's* job to properly clean up after itself.  If you're not making good use of `onunload()` and the various `registerX()` methods to ensure all your changes unload properly, then you may leave Obsidian in an unstable state, forcing you to restart or reload to restore the app to a working state.
+
+P.S. There's currently no hot reload on mobile. If you enable the Sync core plugin (a paid feature, but there are free alternatives) and enable the `Sync > Vault configuration sync, Installed community plugins` feature, you'll be able to see updates on the mobile app. This plugin relies on the `NodeJS` API to watch for file changes, but this is [inaccessible on mobile](https://docs.obsidian.md/Plugins/Getting+started/Mobile+development#Node+and+Electron+APIs), so you'll have to manually reload the app when `Sync` updates the plugin on your mobile device.
 
 ### Installation
 
