@@ -1,6 +1,4 @@
 const {Plugin, Notice, debounce} = require("obsidian");
-const fs = require("fs");
-
 const watchNeeded = window.process.platform !== "darwin" && window.process.platform !== "win32";
 
 module.exports = class HotReload extends Plugin {
@@ -33,12 +31,22 @@ module.exports = class HotReload extends Plugin {
 
     watch(path) {
         if (this.app.vault.adapter.watchers.hasOwnProperty(path)) return;
-        const realPath = [this.app.vault.adapter.basePath, path].join("/");
-        const lstat = fs.lstatSync(realPath, {throwIfNoEntry: false});
-        if (lstat && (watchNeeded || lstat.isSymbolicLink()) && fs.statSync(realPath).isDirectory()) {
-            this.app.vault.adapter.startWatchPath(path, false);
-        }
+        if (this.app.vault.adapter.stat(path).type !== "folder") return;
+        if (watchNeeded || this.isSymlink(path)) this.app.vault.adapter.startWatchPath(path, false);
     }
+
+    isSymlink = (() => {
+        try {
+            const fs = require('fs');
+            return path => {
+                const realPath = [this.app.vault.adapter.basePath, path].join("/");
+                const lstat = fs.lstatSync(realPath, {throwIfNoEntry: false});
+                return lstat && lstat.isSymbolicLink();
+            }
+        } catch (e) {
+            return () => true;
+        }
+    })();
 
     async checkVersions() {
         const base = this.app.plugins.getPluginFolder();
