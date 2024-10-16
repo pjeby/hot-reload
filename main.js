@@ -29,9 +29,9 @@ module.exports = class HotReload extends Plugin {
         });
     }
 
-    watch(path) {
+    async watch(path) {
         if (this.app.vault.adapter.watchers.hasOwnProperty(path)) return;
-        if (this.app.vault.adapter.stat(path).type !== "folder") return;
+        if ((await this.app.vault.adapter.stat(path)).type !== "folder") return;
         if (watchNeeded || this.isSymlink(path)) this.app.vault.adapter.startWatchPath(path, false);
     }
 
