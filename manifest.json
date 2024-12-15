@@ -3,7 +3,7 @@
   "name": "Hot Reload",
   "author": "PJ Eby",
   "authorUrl": "https://github.com/pjeby",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "minAppVersion": "1.5.8",
   "isDesktopOnly": true,
   "description": "Automatically reload in-development plugins when their files are changed"

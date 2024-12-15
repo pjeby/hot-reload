@@ -1,5 +1,5 @@
-const {Plugin, Notice, debounce} = require("obsidian");
-const watchNeeded = window.process.platform !== "darwin" && window.process.platform !== "win32";
+const {Plugin, Notice, debounce, Platform} = require("obsidian");
+const watchNeeded = !Platform.isMacOS && !Platform.isWindows;
 
 module.exports = class HotReload extends Plugin {
 
@@ -30,7 +30,7 @@ module.exports = class HotReload extends Plugin {
     }
 
     async watch(path) {
-        if (this.app.vault.adapter.watchers.hasOwnProperty(path)) return;
+        if (this.app.vault.adapter.watchers?.hasOwnProperty(path)) return;
         if ((await this.app.vault.adapter.stat(path)).type !== "folder") return;
         if (watchNeeded || this.isSymlink(path)) this.app.vault.adapter.startWatchPath(path, false);
     }
