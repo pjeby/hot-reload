@@ -37,10 +37,10 @@ module.exports = class HotReload extends Plugin {
 
     isSymlink = (() => {
         try {
-            const fs = require('fs');
+            const {lstatSync} = require('fs');
             return path => {
                 const realPath = [this.app.vault.adapter.basePath, path].join("/");
-                const lstat = fs.lstatSync(realPath, {throwIfNoEntry: false});
+                const lstat = lstatSync(realPath, {throwIfNoEntry: false});
                 return lstat && lstat.isSymbolicLink();
             }
         } catch (e) {
