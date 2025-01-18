@@ -17,20 +17,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Create release and Upload
-        id: release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG_NAME=${RELEASE_VER##*/}
-          mkdir "${PLUGIN_NAME}"
-          assets=()
-          for f in main.js manifest.json styles.css; do
-            if [[ -f $f ]]; then
-              cp $f "${PLUGIN_NAME}/"
-              assets+=("$f")
-            fi
-          done
-          zip -r "$PLUGIN_NAME".zip "$PLUGIN_NAME"
-          gh release create "$TAG_NAME" -t "$TAG_NAME" -n "### $COMMIT_MESSAGE"
-          gh release upload --clobber "$TAG_NAME" "${assets[@]}" "$PLUGIN_NAME".zip
+      - uses: ophidian-lib/build@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release-notes: ${{ github.event.commits[0].message }}
