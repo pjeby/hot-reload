@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "inlineSourceMap": true,
+    "inlineSources": true,
+    "esModuleInterop": true,
+    "module": "ESNext",
+    "target": "ES2018",
+    "allowJs": true,
+    "noImplicitAny": true,
+    "moduleResolution": "node",
+    "importHelpers": true,
+    "experimentalDecorators": true,
+    "strictBindCallApply": true,
+    "jsx": "react",
+    "jsxFactory": "el",
+    "lib": [
+      "dom",
+      "es2018",
+      "scripthost"
+    ]
+  },
+  "exclude": ["dist"],
+  "include": [
+    "*.ts",
+  ]
+}
