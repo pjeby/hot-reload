@@ -16,6 +16,10 @@ Finally, note that while this plugin takes care of the grunt work of reloading y
 
 This is an Obsidian plugin like any other, and must be cloned or unzipped into your vault's `.obsidian/plugins/` directory (or similar one if you've overridden the `.obsidian` directory name in the Obsidian settings), then enabled in the Obsidian configuration.  It's not registered as a standard community plugin for downloading or updating within Obsidian, because it's intended for developer use only, and because it can enable other plugins.
 
+### Symlinks
+
+Hot-reload supports directory symlinks, if you want to have a plugin folder that symlinks to your build.  However, it's usually simpler to do it the other way around, e.g. `ln -s /some/Vault/.obsidian/plugins/my-plugin ./dist` to make your builder write into your dev/test vault.  File symlinks are not supported.
+
 ### Mobile Plugin Development
 
 This plugin was designed for the desktop and has not been tested on Obsidian mobile.  If you want to get hot-reloading on mobile, you have two main options besides this plugin, depending on what synchronization tool/service you're using:
