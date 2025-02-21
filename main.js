@@ -68,8 +68,7 @@ var HotReload = class extends import_obsidian.Plugin {
     this.statCache = /* @__PURE__ */ new Map();
     // path -> Stat
     this.run = taskQueue();
-    this.reindexPlugins = (0, import_obsidian.debounce)(() => this.run(() => this.getPluginNames()), 500, true);
-    this.requestScan = (0, import_obsidian.debounce)(() => this.run(() => this.checkVersions()), 250, true);
+    this.reindexPlugins = (0, import_obsidian.debounce)(() => this.run(() => this.getPluginNames()), 250, true);
     this.pluginReloaders = {};
     this.pluginNames = {};
     this.enabledPlugins = /* @__PURE__ */ new Set();
@@ -111,11 +110,10 @@ var HotReload = class extends import_obsidian.Plugin {
       await this.getPluginNames();
       this.registerEvent(this.app.vault.on("raw", this.onFileChange));
       this.watch(this.app.plugins.getPluginFolder());
-      this.requestScan();
       this.addCommand({
         id: "scan-for-changes",
         name: "Check plugins for changes and reload them",
-        callback: () => this.requestScan()
+        callback: this.reindexPlugins
       });
     });
   }
@@ -131,7 +129,7 @@ var HotReload = class extends import_obsidian.Plugin {
   async checkVersions() {
     const base = this.app.plugins.getPluginFolder();
     for (const dir of Object.keys(this.pluginNames)) {
-      for (const file of ["manifest.json", "main.js", "styles.css", ".hotreload"]) {
+      for (const file of ["main.js", "styles.css"]) {
         const path = `${base}/${dir}/${file}`;
         const stat = await this.app.vault.adapter.stat(path);
         if (stat) {
@@ -153,6 +151,7 @@ var HotReload = class extends import_obsidian.Plugin {
     }
     this.pluginNames = plugins;
     this.enabledPlugins = enabled;
+    await this.checkVersions();
   }
   async reload(plugin) {
     const plugins = this.app.plugins;

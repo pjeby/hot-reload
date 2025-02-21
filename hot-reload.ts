@@ -8,8 +8,7 @@ export default class HotReload extends Plugin {
     statCache = new Map();  // path -> Stat
     run = taskQueue()
 
-    reindexPlugins = debounce(() => this.run(() => this.getPluginNames()), 500, true);
-    requestScan    = debounce(() => this.run(() => this.checkVersions()),  250, true);
+    reindexPlugins = debounce(() => this.run(() => this.getPluginNames()), 250, true);
 
     pluginReloaders: Record<string, ()=> unknown> = {}
     pluginNames: Record<string, string> = {}
@@ -21,11 +20,10 @@ export default class HotReload extends Plugin {
             await this.getPluginNames();
             this.registerEvent( this.app.vault.on("raw", this.onFileChange));
             this.watch(this.app.plugins.getPluginFolder());
-            this.requestScan();
             this.addCommand({
                 id: "scan-for-changes",
                 name: "Check plugins for changes and reload them",
-                callback: () => this.requestScan()
+                callback: this.reindexPlugins
             })
         });
     }
@@ -52,7 +50,7 @@ export default class HotReload extends Plugin {
     async checkVersions() {
         const base = this.app.plugins.getPluginFolder();
         for (const dir of Object.keys(this.pluginNames)) {
-            for (const file of ["manifest.json", "main.js", "styles.css", ".hotreload"]) {
+            for (const file of ["main.js", "styles.css"]) {
                 const path = `${base}/${dir}/${file}`;
                 const stat = await this.app.vault.adapter.stat(path);
                 if (stat) {
@@ -77,6 +75,7 @@ export default class HotReload extends Plugin {
         }
         this.pluginNames = plugins;
         this.enabledPlugins = enabled;
+        await this.checkVersions()
     }
 
     onFileChange = (filename: string) => {
