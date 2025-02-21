@@ -86,11 +86,30 @@ var HotReload = class extends import_obsidian.Plugin {
         return () => true;
       }
     })();
+    this.onFileChange = (filename) => {
+      if (!filename.startsWith(this.app.plugins.getPluginFolder() + "/"))
+        return;
+      const path = filename.split("/");
+      const base = path.pop(), dir = path.pop();
+      if (path.length === 1 && dir === "plugins")
+        return this.watch(filename);
+      if (path.length != 2)
+        return;
+      const plugin = dir && this.pluginNames[dir];
+      if (base === "manifest.json" || base === ".hotreload" || base === ".git" || !plugin)
+        return this.reindexPlugins();
+      if (base !== "main.js" && base !== "styles.css")
+        return;
+      if (!this.enabledPlugins.has(plugin))
+        return;
+      const reloader = this.pluginReloaders[plugin] || (this.pluginReloaders[plugin] = (0, import_obsidian.debounce)(() => this.run(() => this.reload(plugin).catch(console.error)), 750, true));
+      reloader();
+    };
   }
   onload() {
     this.app.workspace.onLayoutReady(async () => {
       await this.getPluginNames();
-      this.registerEvent(this.app.vault.on("raw", this.requestScan));
+      this.registerEvent(this.app.vault.on("raw", this.onFileChange));
       this.watch(this.app.plugins.getPluginFolder());
       this.requestScan();
       this.addCommand({
@@ -134,25 +153,6 @@ var HotReload = class extends import_obsidian.Plugin {
     }
     this.pluginNames = plugins;
     this.enabledPlugins = enabled;
-  }
-  onFileChange(filename) {
-    if (!filename.startsWith(this.app.plugins.getPluginFolder() + "/"))
-      return;
-    const path = filename.split("/");
-    const base = path.pop(), dir = path.pop();
-    if (path.length === 1 && dir === "plugins")
-      return this.watch(filename);
-    if (path.length != 2)
-      return;
-    const plugin = dir && this.pluginNames[dir];
-    if (base === "manifest.json" || base === ".hotreload" || base === ".git" || !plugin)
-      return this.reindexPlugins();
-    if (base !== "main.js" && base !== "styles.css")
-      return;
-    if (!this.enabledPlugins.has(plugin))
-      return;
-    const reloader = this.pluginReloaders[plugin] || (this.pluginReloaders[plugin] = (0, import_obsidian.debounce)(() => this.run(() => this.reload(plugin).catch(console.error)), 750, true));
-    reloader();
   }
   async reload(plugin) {
     const plugins = this.app.plugins;

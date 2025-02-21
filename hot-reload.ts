@@ -19,7 +19,7 @@ export default class HotReload extends Plugin {
     onload() {
         this.app.workspace.onLayoutReady(async ()=> {
             await this.getPluginNames();
-            this.registerEvent( this.app.vault.on("raw", this.requestScan));
+            this.registerEvent( this.app.vault.on("raw", this.onFileChange));
             this.watch(this.app.plugins.getPluginFolder());
             this.requestScan();
             this.addCommand({
@@ -79,7 +79,7 @@ export default class HotReload extends Plugin {
         this.enabledPlugins = enabled;
     }
 
-    onFileChange(filename: string) {
+    onFileChange = (filename: string) => {
         if (!filename.startsWith(this.app.plugins.getPluginFolder()+"/")) return;
         const path = filename.split("/");
         const base = path.pop(), dir = path.pop();
@@ -146,7 +146,7 @@ function taskQueue() {
 declare module "obsidian" {
     interface Vault {
         exists(path: string): Promise<boolean>
-        on(type: "raw", handler: () => void): EventRef
+        on(type: "raw", handler: (filename: string) => void): EventRef
     }
     interface DataAdapter {
         basePath: string
