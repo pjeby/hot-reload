@@ -15,16 +15,16 @@ export default class HotReload extends Plugin {
     enabledPlugins = new Set<string>()
     currentlyLoading = 0
 
-    onload() {
-        this.app.workspace.onLayoutReady(async ()=> {
-            await this.getPluginNames();
+    async onload() {
+        await this.getPluginNames();
+        this.addCommand({
+            id: "scan-for-changes",
+            name: "Check plugins for changes and reload them",
+            callback: this.reindexPlugins
+        })
+        this.app.workspace.onLayoutReady(() => {
             this.registerEvent( this.app.vault.on("raw", this.onFileChange));
             this.watch(this.app.plugins.getPluginFolder());
-            this.addCommand({
-                id: "scan-for-changes",
-                name: "Check plugins for changes and reload them",
-                callback: this.reindexPlugins
-            })
         });
     }
 
