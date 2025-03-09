@@ -47,18 +47,20 @@ export default class HotReload extends Plugin {
         }
     })();
 
-    async checkVersions() {
-        const base = this.app.plugins.getPluginFolder();
-        for (const dir of Object.keys(this.pluginNames)) {
-            for (const file of ["main.js", "styles.css"]) {
-                const path = `${base}/${dir}/${file}`;
-                const stat = await this.app.vault.adapter.stat(path);
-                if (stat) {
-                    if (this.statCache.has(path) && stat.mtime !== this.statCache.get(path).mtime) {
-                        this.onFileChange(path);
-                    }
-                    this.statCache.set(path, stat);
+    checkVersions() {
+        return Promise.all(Object.values(this.pluginNames).map(this.checkVersion))
+    }
+
+    checkVersion = async (plugin: string) => {
+        const {dir} = this.app.plugins.manifests[plugin]
+        for (const file of ["main.js", "styles.css"]) {
+            const path = `${dir}/${file}`;
+            const stat = await this.app.vault.adapter.stat(path);
+            if (stat) {
+                if (this.statCache.has(path) && stat.mtime !== this.statCache.get(path).mtime) {
+                    this.requestReload(plugin);
                 }
+                this.statCache.set(path, stat);
             }
         }
     }
@@ -87,6 +89,10 @@ export default class HotReload extends Plugin {
         const plugin = dir && this.pluginNames[dir];
         if (base === "manifest.json" || base === ".hotreload" || base === ".git" || !plugin) return this.reindexPlugins();
         if (base !== "main.js" && base !== "styles.css") return;
+        this.checkVersion(plugin);
+    }
+
+    requestReload(plugin: string) {
         if (!this.enabledPlugins.has(plugin)) return;
         const reloader = this.pluginReloaders[plugin] || (
             this.pluginReloaders[plugin] = debounce(() => this.run(() => this.reload(plugin).catch(console.error)), 750, true)
@@ -154,7 +160,7 @@ declare module "obsidian" {
     }
     interface App {
         plugins: {
-            manifests: PluginManifest[]
+            manifests: Record<string, PluginManifest>
             getPluginFolder(): string
             enablePlugin(plugin: string): Promise<void>
             disablePlugin(plugin: string): Promise<void>

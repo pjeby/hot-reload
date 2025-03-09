@@ -85,6 +85,19 @@ var HotReload = class extends import_obsidian.Plugin {
         return () => true;
       }
     })();
+    this.checkVersion = async (plugin) => {
+      const { dir } = this.app.plugins.manifests[plugin];
+      for (const file of ["main.js", "styles.css"]) {
+        const path = `${dir}/${file}`;
+        const stat = await this.app.vault.adapter.stat(path);
+        if (stat) {
+          if (this.statCache.has(path) && stat.mtime !== this.statCache.get(path).mtime) {
+            this.requestReload(plugin);
+          }
+          this.statCache.set(path, stat);
+        }
+      }
+    };
     this.onFileChange = (filename) => {
       if (!filename.startsWith(this.app.plugins.getPluginFolder() + "/"))
         return;
@@ -99,10 +112,7 @@ var HotReload = class extends import_obsidian.Plugin {
         return this.reindexPlugins();
       if (base !== "main.js" && base !== "styles.css")
         return;
-      if (!this.enabledPlugins.has(plugin))
-        return;
-      const reloader = this.pluginReloaders[plugin] || (this.pluginReloaders[plugin] = (0, import_obsidian.debounce)(() => this.run(() => this.reload(plugin).catch(console.error)), 750, true));
-      reloader();
+      this.checkVersion(plugin);
     };
   }
   onload() {
@@ -126,20 +136,8 @@ var HotReload = class extends import_obsidian.Plugin {
     if (watchNeeded || this.isSymlink(path))
       this.app.vault.adapter.startWatchPath(path, false);
   }
-  async checkVersions() {
-    const base = this.app.plugins.getPluginFolder();
-    for (const dir of Object.keys(this.pluginNames)) {
-      for (const file of ["main.js", "styles.css"]) {
-        const path = `${base}/${dir}/${file}`;
-        const stat = await this.app.vault.adapter.stat(path);
-        if (stat) {
-          if (this.statCache.has(path) && stat.mtime !== this.statCache.get(path).mtime) {
-            this.onFileChange(path);
-          }
-          this.statCache.set(path, stat);
-        }
-      }
-    }
+  checkVersions() {
+    return Promise.all(Object.values(this.pluginNames).map(this.checkVersion));
   }
   async getPluginNames() {
     const plugins = {}, enabled = /* @__PURE__ */ new Set();
@@ -152,6 +150,12 @@ var HotReload = class extends import_obsidian.Plugin {
     this.pluginNames = plugins;
     this.enabledPlugins = enabled;
     await this.checkVersions();
+  }
+  requestReload(plugin) {
+    if (!this.enabledPlugins.has(plugin))
+      return;
+    const reloader = this.pluginReloaders[plugin] || (this.pluginReloaders[plugin] = (0, import_obsidian.debounce)(() => this.run(() => this.reload(plugin).catch(console.error)), 750, true));
+    reloader();
   }
   async reload(plugin) {
     const plugins = this.app.plugins;
