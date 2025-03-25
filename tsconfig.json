@@ -5,7 +5,7 @@
     "inlineSources": true,
     "esModuleInterop": true,
     "module": "ESNext",
-    "target": "ES2018",
+    "target": "ES2021",
     "allowJs": true,
     "noImplicitAny": true,
     "moduleResolution": "node",
@@ -16,7 +16,7 @@
     "jsxFactory": "el",
     "lib": [
       "dom",
-      "es2018",
+      "es2021",
       "scripthost"
     ]
   },
