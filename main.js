@@ -86,16 +86,20 @@ var HotReload = class extends import_obsidian.Plugin {
       }
     })();
     this.checkVersion = async (plugin) => {
-      const { dir } = this.app.plugins.manifests[plugin];
-      for (const file of ["main.js", "styles.css"]) {
-        const path = `${dir}/${file}`;
-        const stat = await this.app.vault.adapter.stat(path);
-        if (stat) {
-          if (this.statCache.has(path) && stat.mtime !== this.statCache.get(path).mtime) {
-            this.requestReload(plugin);
+      const { dir } = this.app.plugins.manifests[plugin] || {};
+      if (dir)
+        for (const file of ["main.js", "styles.css"]) {
+          const path = `${dir}/${file}`;
+          const stat = await this.app.vault.adapter.stat(path);
+          if (stat) {
+            if (this.statCache.has(path) && stat.mtime !== this.statCache.get(path).mtime) {
+              this.requestReload(plugin);
+            }
+            this.statCache.set(path, stat);
           }
-          this.statCache.set(path, stat);
         }
+      else {
+        delete this.pluginNames[plugin];
       }
     };
     this.onFileChange = (filename) => {
@@ -128,10 +132,9 @@ var HotReload = class extends import_obsidian.Plugin {
     });
   }
   async watch(path) {
-    var _a;
-    if ((_a = this.app.vault.adapter.watchers) == null ? void 0 : _a.hasOwnProperty(path))
+    if (this.app.vault.adapter.watchers?.hasOwnProperty(path))
       return;
-    if ((await this.app.vault.adapter.stat(path)).type !== "folder")
+    if ((await this.app.vault.adapter.stat(path))?.type !== "folder")
       return;
     if (watchNeeded || this.isSymlink(path))
       this.app.vault.adapter.startWatchPath(path, false);
@@ -173,7 +176,7 @@ var HotReload = class extends import_obsidian.Plugin {
         localStorage.removeItem("debug-plugin");
       else
         localStorage.setItem("debug-plugin", oldDebug);
-      uninstall == null ? void 0 : uninstall();
+      uninstall?.();
     }
     console.debug("enabled", plugin);
     new import_obsidian.Notice(`Plugin "${plugin}" has been reloaded`);

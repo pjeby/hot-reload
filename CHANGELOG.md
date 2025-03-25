@@ -1,5 +1,9 @@
 # Changelog
 
+### 0.2.2 (Unreleased)
+- Fix errors when a watched plugin is deleted on disk
+- Update build target to ES2021
+
 ### 0.2.1 (2025-03-09)
 - Add change log
 - Don't reload unless files are actually changed (fixes an issue where sync tools reading plugin files could trigger a reload)

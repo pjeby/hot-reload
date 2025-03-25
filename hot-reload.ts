@@ -30,7 +30,7 @@ export default class HotReload extends Plugin {
 
     async watch(path: string) {
         if (this.app.vault.adapter.watchers?.hasOwnProperty(path)) return;
-        if ((await this.app.vault.adapter.stat(path)).type !== "folder") return;
+        if ((await this.app.vault.adapter.stat(path))?.type !== "folder") return;
         if (watchNeeded || this.isSymlink(path)) this.app.vault.adapter.startWatchPath(path, false);
     }
 
@@ -52,8 +52,8 @@ export default class HotReload extends Plugin {
     }
 
     checkVersion = async (plugin: string) => {
-        const {dir} = this.app.plugins.manifests[plugin]
-        for (const file of ["main.js", "styles.css"]) {
+        const {dir} = (this.app.plugins.manifests[plugin] || {})
+        if (dir) for (const file of ["main.js", "styles.css"]) {
             const path = `${dir}/${file}`;
             const stat = await this.app.vault.adapter.stat(path);
             if (stat) {
@@ -62,6 +62,9 @@ export default class HotReload extends Plugin {
                 }
                 this.statCache.set(path, stat);
             }
+        } else {
+            // Deleted plugin, stop watching
+            delete this.pluginNames[plugin]
         }
     }
 
