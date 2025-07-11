@@ -1,10 +1,10 @@
-import { Plugin, Notice, debounce, Platform, requireApiVersion, App } from "obsidian";
+import { Plugin, Notice, debounce, Platform, requireApiVersion, App, PluginSettingTab, Setting } from "obsidian";
 import { around } from "monkey-around"
 
 const watchNeeded = !Platform.isMacOS && !Platform.isWin;
 
 export default class HotReload extends Plugin {
-
+    settings: HotReloadSettings;
     statCache = new Map();  // path -> Stat
     run = taskQueue()
 
@@ -22,10 +22,20 @@ export default class HotReload extends Plugin {
             name: "Check plugins for changes and reload them",
             callback: this.reindexPlugins
         })
-        this.app.workspace.onLayoutReady(() => {
+        this.app.workspace.onLayoutReady(async () => {
+            await this.loadSettings();
             this.registerEvent( this.app.vault.on("raw", this.onFileChange));
             this.watch(this.app.plugins.getPluginFolder());
         });
+        this.addSettingTab(new HotReloadSettingTab(this));
+    }
+
+    async loadSettings() {
+        this.settings = Object.assign(new HotReloadSettings(), await this.loadData());
+    }
+
+    async saveSettings() {
+        await this.saveData(this.settings);
     }
 
     async watch(path: string) {
@@ -109,6 +119,16 @@ export default class HotReload extends Plugin {
         // Don't reload disabled plugins
         if (!plugins.enabledPlugins.has(plugin)) return;
 
+        let settingTabScrollTop = 0;
+        let settingTabScrollLeft = 0;
+        let isSettingTabActive = false;
+
+        if (this.app.setting.activeTab?.id === plugin) {
+            settingTabScrollTop = this.app.setting.activeTab.containerEl.scrollTop;
+            settingTabScrollLeft = this.app.setting.activeTab.containerEl.scrollLeft;
+            isSettingTabActive = true;
+        }
+
         await plugins.disablePlugin(plugin);
         console.debug("disabled", plugin);
 
@@ -118,13 +138,65 @@ export default class HotReload extends Plugin {
         const uninstall = preventSourcemapStripping(this.app, plugin)
         try {
             await plugins.enablePlugin(plugin);
+            if (isSettingTabActive && this.app.setting.containerEl.isShown() && this.app.setting.activeTab === null && this.settings.shouldReopenActiveSettingsTab) {
+                const settingTab = this.app.setting.openTabById(plugin);
+                if (settingTab) {
+                    settingTab.containerEl.scrollTo({ left: settingTabScrollLeft, top: settingTabScrollTop });
+                }
+            }
         } finally {
             // Restore previous setting
             if (oldDebug === null) localStorage.removeItem("debug-plugin"); else localStorage.setItem("debug-plugin", oldDebug);
             uninstall?.()
         }
-        console.debug("enabled", plugin);
-        new Notice(`Plugin "${plugin}" has been reloaded`);
+        this.showNotice(`Plugin "${plugin}" has been reloaded`);
+    }
+
+    showNotice(message: string) {
+        console.debug(message);
+        if (this.settings.shouldShowReloadNotice) {
+            new Notice(message);
+        }
+    }
+}
+
+class HotReloadSettings {
+    shouldReopenActiveSettingsTab = true;
+    shouldShowReloadNotice = true;
+}
+
+class HotReloadSettingTab extends PluginSettingTab {
+    plugin: HotReload;
+
+    constructor(plugin: HotReload) {
+        super(plugin.app, plugin);
+        this.plugin = plugin;
+    }
+
+    display() {
+        this.containerEl.empty();
+
+        new Setting(this.containerEl)
+            .setName("Should reopen active settings tab")
+            .setDesc("Whether to reopen the active settings tab after reloading the plugin.")
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.shouldReopenActiveSettingsTab)
+                .onChange(async (value) => {
+                    this.plugin.settings.shouldReopenActiveSettingsTab = value
+                    await this.plugin.saveSettings()
+                })
+            );
+
+        new Setting(this.containerEl)
+            .setName("Should show reload notice")
+            .setDesc("Whether to show a notice after reloading the plugin.")
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.shouldShowReloadNotice)
+                .onChange(async (value) => {
+                    this.plugin.settings.shouldShowReloadNotice = value
+                    await this.plugin.saveSettings()
+                })
+            );
     }
 }
 
@@ -168,6 +240,11 @@ declare module "obsidian" {
             enablePlugin(plugin: string): Promise<void>
             disablePlugin(plugin: string): Promise<void>
             enabledPlugins: Set<string>
+        }
+        setting: {
+            activeTab: SettingTab & { id: string } | null
+            containerEl: HTMLElement
+            openTabById(id: string): SettingTab | null
         }
     }
 }
