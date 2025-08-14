@@ -5,7 +5,7 @@
   "authorUrl": "https://github.com/pjeby",
   "version": "0.2.2",
   "minAppVersion": "1.5.8",
-  "isDesktopOnly": true,
+  "isDesktopOnly": false,
   "fundingUrl": "https://dirtsimple.org/tips/hot-reload",
   "description": "Automatically reload in-development plugins when their files are changed"
 }

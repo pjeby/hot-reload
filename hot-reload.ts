@@ -1,7 +1,7 @@
-import { Plugin, Notice, debounce, Platform, requireApiVersion, App, Component } from "obsidian";
+import { Plugin, Notice, debounce, Platform, requireApiVersion, App, Component, FileSystemAdapter } from "obsidian";
 import { around } from "monkey-around"
 
-const watchNeeded = !Platform.isMacOS && !Platform.isWin;
+const watchNeeded = !Platform.isMobile && !Platform.isMacOS && !Platform.isWin;
 
 export default class HotReload extends Plugin {
 
@@ -31,9 +31,13 @@ export default class HotReload extends Plugin {
     }
 
     async watch(path: string) {
+        if (!(this.app.vault.adapter instanceof FileSystemAdapter)) {
+            return;
+        }
+
         if (this.app.vault.adapter.watchers?.hasOwnProperty(path)) return;
         if ((await this.app.vault.adapter.stat(path))?.type !== "folder") return;
-        if (watchNeeded || this.isSymlink(path)) this.app.vault.adapter.startWatchPath(path, false);
+        if (watchNeeded || this.isSymlink(path)) this.app.vault.adapter.startWatchPath(path);
     }
 
     isSymlink = (() => {
@@ -215,8 +219,10 @@ declare module "obsidian" {
     }
     interface DataAdapter {
         basePath: string
+    }
+    interface FileSystemAdapter extends DataAdapter {
         watchers: Record<string, unknown>
-        startWatchPath(path: string, flag: boolean): void
+        startWatchPath(path: string): void
     }
     interface App {
         plugins: {
