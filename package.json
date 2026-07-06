@@ -5,10 +5,9 @@
     "build": "node ophidian.config.mjs production"
   },
   "license": "ISC",
-  "packageManager": "pnpm@7.33.6",
+  "packageManager": "pnpm@9.15.9",
   "devDependencies": {
     "@ophidian/build": "ophidian-lib/build",
-    "@types/node": "^16",
     "monkey-around": "^3",
     "obsidian": "1.3.5"
   }

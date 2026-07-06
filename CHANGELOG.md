@@ -1,5 +1,8 @@
 # Changelog
 
+### 0.3.1 (2026-07-05)
+- Submit to plugin store; no user-visible changes
+
 ### 0.3.0 (2025-08-14)
 - Beta support for mobile, thanks to [@mnaoumov](https://github.com/mnaoumov) for testing and suggestions
 

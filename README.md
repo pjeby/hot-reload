@@ -14,7 +14,9 @@ Finally, note that while this plugin takes care of the grunt work of reloading y
 
 ### Installation
 
-This is an Obsidian plugin like any other, and must be cloned or unzipped into your vault's `.obsidian/plugins/` directory (or similar one if you've overridden the `.obsidian` directory name in the Obsidian settings), then enabled in the Obsidian configuration.  It's not registered as a standard community plugin for downloading or updating within Obsidian, because it's intended for developer use only, and because it can enable other plugins.
+This is an Obsidian plugin like any other, and must be installed from Obsidian's settings or cloned into your vault's `.obsidian/plugins/` directory (or similar one if you've overridden the `.obsidian` directory name in the Obsidian settings), then enabled in Obsidian's "Community Plugins" settings.
+
+Please note that YOU DO NOT NEED THIS unless you are developing plugins of your own: it's for developer use only, and *it can enable other plugins*.  Only install/enable this if you are actively developing a plugin of your own.
 
 ### Symlinks
 

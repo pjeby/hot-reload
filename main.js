@@ -68,24 +68,17 @@ var HotReload = class extends import_obsidian.Plugin {
     this.statCache = /* @__PURE__ */ new Map();
     // path -> Stat
     this.run = taskQueue();
-    this.reindexPlugins = (0, import_obsidian.debounce)(() => this.run(() => this.getPluginNames()), 250, true);
+    this.reindexPlugins = (0, import_obsidian.debounce)(() => void this.run(() => this.getPluginNames()), 250, true);
     this.pluginReloaders = {};
     this.pluginNames = {};
     this.enabledPlugins = /* @__PURE__ */ new Set();
     this.currentlyLoading = 0;
     this.settingReloader = new SettingReloader(this);
-    this.isSymlink = (() => {
-      try {
-        const { lstatSync } = require("fs");
-        return (adapter, path) => {
-          const realPath = [adapter.basePath, path].join("/");
-          const lstat = lstatSync(realPath, { throwIfNoEntry: false });
-          return lstat && lstat.isSymbolicLink();
-        };
-      } catch (e) {
-        return () => true;
-      }
-    })();
+    this.isSymlink = (adapter, path) => {
+      const realPath = [adapter.basePath, path].join("/");
+      const lstat = adapter.fs.lstatSync(realPath, { throwIfNoEntry: false });
+      return lstat && lstat.isSymbolicLink();
+    };
     this.checkVersion = async (plugin) => {
       const { dir } = this.app.plugins.manifests[plugin] || {};
       if (dir)
@@ -117,7 +110,7 @@ var HotReload = class extends import_obsidian.Plugin {
         return this.reindexPlugins();
       if (base !== "main.js" && base !== "styles.css")
         return;
-      this.checkVersion(plugin);
+      void this.checkVersion(plugin);
     };
   }
   onload() {
@@ -132,14 +125,16 @@ var HotReload = class extends import_obsidian.Plugin {
       this.watch(this.app.plugins.getPluginFolder());
     });
   }
-  async watch(path) {
+  watch(path) {
     const { adapter } = this.app.vault;
-    if (!(adapter instanceof import_obsidian.FileSystemAdapter) || adapter.watchers?.hasOwnProperty(path))
+    if (!(adapter instanceof import_obsidian.FileSystemAdapter) || hasOwnProperty(adapter.watchers, path))
       return;
-    if ((await adapter.stat(path))?.type !== "folder")
-      return;
-    if (watchNeeded || this.isSymlink(adapter, path))
-      adapter.startWatchPath(path);
+    void (async () => {
+      if ((await adapter.stat(path))?.type !== "folder")
+        return;
+      if (watchNeeded || this.isSymlink(adapter, path))
+        adapter.startWatchPath(path);
+    })();
   }
   checkVersions() {
     return Promise.all(Object.values(this.pluginNames).map(this.checkVersion));
@@ -169,16 +164,16 @@ var HotReload = class extends import_obsidian.Plugin {
     this.settingReloader.onPluginDisable(plugin);
     await plugins.disablePlugin(plugin);
     console.debug("disabled", plugin);
-    const oldDebug = localStorage.getItem("debug-plugin");
-    localStorage.setItem("debug-plugin", "1");
+    const oldDebug = store.getItem("debug-plugin");
+    store.setItem("debug-plugin", "1");
     const uninstall = preventSourcemapStripping(this.app, plugin);
     try {
       await plugins.enablePlugin(plugin);
     } finally {
       if (oldDebug === null)
-        localStorage.removeItem("debug-plugin");
+        store.removeItem("debug-plugin");
       else
-        localStorage.setItem("debug-plugin", oldDebug);
+        store.setItem("debug-plugin", oldDebug);
       uninstall?.();
     }
     console.debug("enabled", plugin);
@@ -189,8 +184,8 @@ function preventSourcemapStripping(app, pluginName) {
   if ((0, import_obsidian.requireApiVersion)("1.6"))
     return around(app.vault.adapter, {
       read(old) {
-        return function(path) {
-          const res = old.apply(this, arguments);
+        return function(path, ...args) {
+          const res = old.call(this, path, ...args);
           if (!path.endsWith(`/${pluginName}/main.js`))
             return res;
           return res.then((txt) => txt + "\n/* nosourcemap */");
@@ -202,12 +197,13 @@ function taskQueue() {
   let last = Promise.resolve();
   return (action) => {
     return !action ? last : last = new Promise(
-      (res, rej) => last.finally(
+      (res, rej) => void last.finally(
         () => {
           try {
             res(action());
           } catch (e) {
-            rej(e);
+            let _e = e;
+            rej(_e);
           }
         }
       )
@@ -237,7 +233,7 @@ var SettingReloader = class extends import_obsidian.Component {
     }
   }
   onload() {
-    const self = this;
+    const self = (() => this)();
     this.plugin.addChild(this);
     this.register(around(import_obsidian.Plugin.prototype, {
       addSettingTab(next) {
@@ -246,17 +242,21 @@ var SettingReloader = class extends import_obsidian.Component {
           if (self.lastTab && this.manifest.id === self.lastTab) {
             const { lastTab, left, top } = self;
             self.lastTab = void 0;
-            setTimeout(() => {
+            void activeWindow.sleep(100).then(() => {
               if (self.lastTab || // another state was saved
               !this.app.setting.containerEl.isShown() || // settings not open
               this.app.setting.activeTab)
                 return;
               this.app.setting.openTabById(lastTab);
               tab.containerEl.scrollTo({ left, top });
-            }, 100);
+            });
           }
         };
       }
     }));
   }
 };
+function hasOwnProperty(ob, prop) {
+  return !!ob && Object.prototype.hasOwnProperty.call(ob, prop);
+}
+var store = window["localStorage"];

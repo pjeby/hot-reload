@@ -1,14 +1,15 @@
 import { Plugin, Notice, debounce, Platform, requireApiVersion, App, Component, FileSystemAdapter } from "obsidian";
+import * as o from "obsidian"
 import { around } from "monkey-around"
 
 const watchNeeded = !Platform.isMacOS && !Platform.isWin;
 
 export default class HotReload extends Plugin {
 
-    statCache = new Map();  // path -> Stat
+    statCache = new Map<string, o.Stat>();  // path -> Stat
     run = taskQueue()
 
-    reindexPlugins = debounce(() => this.run(() => this.getPluginNames()), 250, true);
+    reindexPlugins: () => void = debounce((): void => void this.run(() => this.getPluginNames()), 250, true);
 
     pluginReloaders: Record<string, ()=> unknown> = {}
     pluginNames: Record<string, string> = {}
@@ -30,25 +31,20 @@ export default class HotReload extends Plugin {
         });
     }
 
-    async watch(path: string) {
+    watch(path: string) {
         const {adapter} = this.app.vault;
-        if (!(adapter instanceof FileSystemAdapter) || adapter.watchers?.hasOwnProperty(path)) return;
-        if ((await adapter.stat(path))?.type !== "folder") return;
-        if (watchNeeded || this.isSymlink(adapter, path)) adapter.startWatchPath(path);
+        if (!(adapter instanceof FileSystemAdapter) || hasOwnProperty(adapter.watchers, path)) return;
+        void (async () => {
+            if ((await adapter.stat(path))?.type !== "folder") return;
+            if (watchNeeded || this.isSymlink(adapter, path)) adapter.startWatchPath(path);
+        })()
     }
 
-    isSymlink = (() => {
-        try {
-            const {lstatSync} = require('fs');
-            return (adapter: FileSystemAdapter, path: string) => {
-                const realPath = [adapter.basePath, path].join("/");
-                const lstat = lstatSync(realPath, {throwIfNoEntry: false});
-                return lstat && lstat.isSymbolicLink();
-            }
-        } catch (e) {
-            return () => true;
-        }
-    })();
+    isSymlink = (adapter: FileSystemAdapter, path: string) => {
+        const realPath = [adapter.basePath, path].join("/");
+        const lstat = adapter.fs.lstatSync(realPath, {throwIfNoEntry: false});
+        return lstat && lstat.isSymbolicLink();
+    }
 
     checkVersions() {
         return Promise.all(Object.values(this.pluginNames).map(this.checkVersion))
@@ -95,7 +91,7 @@ export default class HotReload extends Plugin {
         const plugin = dir && this.pluginNames[dir];
         if (base === "manifest.json" || base === ".hotreload" || base === ".git" || !plugin) return this.reindexPlugins();
         if (base !== "main.js" && base !== "styles.css") return;
-        this.checkVersion(plugin);
+        void this.checkVersion(plugin);
     }
 
     requestReload(plugin: string) {
@@ -118,14 +114,14 @@ export default class HotReload extends Plugin {
         console.debug("disabled", plugin);
 
         // Ensure sourcemaps are loaded (Obsidian 0.14+)
-        const oldDebug = localStorage.getItem("debug-plugin");
-        localStorage.setItem("debug-plugin", "1");
+        const oldDebug = store.getItem("debug-plugin");
+        store.setItem("debug-plugin", "1");
         const uninstall = preventSourcemapStripping(this.app, plugin)
         try {
             await plugins.enablePlugin(plugin);
         } finally {
             // Restore previous setting
-            if (oldDebug === null) localStorage.removeItem("debug-plugin"); else localStorage.setItem("debug-plugin", oldDebug);
+            if (oldDebug === null) store.removeItem("debug-plugin"); else store.setItem("debug-plugin", oldDebug);
             uninstall?.()
         }
         console.debug("enabled", plugin);
@@ -136,8 +132,8 @@ export default class HotReload extends Plugin {
 function preventSourcemapStripping(app: App, pluginName: string) {
     if (requireApiVersion("1.6")) return(around(app.vault.adapter, {
         read(old) {
-            return function (path: string) {
-                const res = old.apply(this, arguments as any)
+            return function (path: string, ...args: unknown[]) {
+                const res = old.call(this, path, ...args)
                 if (!path.endsWith(`/${pluginName}/main.js`)) return res
                 return res.then(txt => txt+'\n/* nosourcemap */')
             }
@@ -146,11 +142,11 @@ function preventSourcemapStripping(app: App, pluginName: string) {
 }
 
 function taskQueue() {
-    let last: Promise<any> = Promise.resolve();
+    let last: Promise<unknown> = Promise.resolve();
     return <T>(action?: () => T|PromiseLike<T>): Promise<T> => {
-        return !action ? last : last = new Promise<T>(
-            (res, rej) => last.finally(
-                () => { try { res(action()); } catch(e) { rej(e); } }
+        return !action ? last as Promise<T>: last = new Promise<T>(
+            (res, rej) => void last.finally(
+                () => { try { res(action()); } catch(e) { let _e: Error = e; rej(_e); } }
             )
         )
     }
@@ -183,17 +179,17 @@ class SettingReloader extends Component {
     }
 
     onload() {
-        const self = this;
+        const self = (() => this)(); // eslint yak-shaving
         this.plugin.addChild(this) // ensure we unload when hot-reload does
         this.register(around(Plugin.prototype, {
             addSettingTab(next) {
-                return function(this: Plugin, tab, ...args: any[]) {
+                return function(this: Plugin, tab, ...args: unknown[]) {
                     next.call(this, tab, ...args);
                     if (self.lastTab && this.manifest.id === self.lastTab) {
                         const {lastTab, left, top} = self;
                         // only try this once per plugin id per disable
                         self.lastTab = undefined;
-                        setTimeout(() => {
+                        void activeWindow.sleep(100).then(() => {
                             if (
                                 self.lastTab ||  // another state was saved
                                 !this.app.setting.containerEl.isShown() ||  // settings not open
@@ -201,7 +197,7 @@ class SettingReloader extends Component {
                             ) return;
                             this.app.setting.openTabById(lastTab);
                             tab.containerEl.scrollTo({left, top});
-                        }, 100)
+                        })
                     }
                 }
             }
@@ -209,12 +205,19 @@ class SettingReloader extends Component {
     }
 }
 
+function hasOwnProperty(ob: object, prop: string) {
+    return !!ob && Object.prototype.hasOwnProperty.call(ob, prop)
+}
+
+const store = window["localStorage"]
+
 declare module "obsidian" {
     interface Vault {
         exists(path: string): Promise<boolean>
         on(type: "raw", handler: (filename: string) => void): EventRef
     }
     interface FileSystemAdapter {
+        fs: { lstatSync(path: string, options: {throwIfNoEntry: boolean}): { isSymbolicLink(): boolean }}
         basePath: string
         watchers: Record<string, unknown>
         startWatchPath(path: string): void
@@ -229,9 +232,9 @@ declare module "obsidian" {
             plugins: Record<string, Plugin>
         }
         setting: {
-            activeTab: SettingTab & { id: string } | null
+            activeTab: o.SettingTab & { id: string } | null
             containerEl: HTMLElement
-            openTabById(id: string): SettingTab | null
+            openTabById(id: string): o.SettingTab | null
         }
     }
 }
